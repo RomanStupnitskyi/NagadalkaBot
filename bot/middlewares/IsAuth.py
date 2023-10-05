@@ -1,6 +1,5 @@
 from typing import Any, Awaitable, Callable
 from pymongo import MongoClient
-from decouple import config
 import logging
 
 from aiogram import BaseMiddleware, Bot

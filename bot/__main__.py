@@ -1,10 +1,11 @@
 from pymongo import MongoClient
-from decouple import config
+from dotenv import load_dotenv
 import asyncio
 import logging
+import sys
+import os
 
 from aiogram import Bot, Dispatcher
-from aiogram.types.user import User
 from aiogram.fsm.storage.memory import MemoryStorage
 from middlewares import DatabaseMiddleware, IsAuthMiddleware
 from routers import general_router, development_router, birthday_router
@@ -15,7 +16,7 @@ def setup_logging() -> None:
 
 
 def setup_database() -> MongoClient:
-	return MongoClient(config("DB_URL"))
+	return MongoClient(os.getenv("DB_URL"))
 
 
 def setup_middlewares(dp: Dispatcher, db: MongoClient) -> None:
@@ -44,8 +45,11 @@ async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
 
 
 def main() -> None:
+	if not '--production' in sys.argv:
+		load_dotenv()
+
 	setup_logging()
-	bot = Bot(config("BOT_TOKEN"), parse_mode="HTML")
+	bot = Bot(os.getenv("BOT_TOKEN"), parse_mode="HTML")
 	storage = MemoryStorage()
 
 	dp = Dispatcher(storage=storage)
