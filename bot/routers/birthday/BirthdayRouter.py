@@ -10,6 +10,7 @@ from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types.message import Message
 from aiogram.types.user import User
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram import Router, Bot
 
 from .filters.DM import DM
@@ -72,7 +73,9 @@ async def birthday_group_command(message: Message, db: MongoClient) -> None:
 	user_data = collection.find_one({ "id": message.from_user.id })
 
 	if not user_data.get('birthday'):
-		await message.reply('❓ Ти ще не вказав дату свого народження. Напиши мені в особисті повідомлення /birthday, щоб вказату дату свого народження')
+		button = InlineKeyboardButton(text="Добавити свій День Народження", url="https://t.me/nagadalka_bot")
+		markup = InlineKeyboardMarkup(inline_keyboard=[[button]])
+		await message.reply('❓ Я не знаю коли в тебе день народження', reply_markup=markup)
 		return None
 	
 	await message.reply(
