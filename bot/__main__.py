@@ -45,9 +45,9 @@ async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
 
 
 def main() -> None:
-	BOT_TOKEN = os.getenv("TEST_BOT_TOKEN")
+	BOT_TOKEN = os.getenv("BOT_TOKEN")
 	if not '--production' in sys.argv:
-		BOT_TOKEN = os.getenv("BOT_TOKEN")
+		BOT_TOKEN = os.getenv("TEST_BOT_TOKEN")
 		load_dotenv()
 
 	setup_logging()
