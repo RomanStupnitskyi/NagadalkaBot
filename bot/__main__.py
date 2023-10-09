@@ -15,8 +15,14 @@ def setup_logging() -> None:
 	logging.basicConfig(level=logging.DEBUG)
 
 
-def setup_database() -> MongoClient:
-	return MongoClient(os.getenv("DB_URL"))
+def setup_database(url: str) -> MongoClient:
+	db = MongoClient(url)
+	config = db.telegram.config.find_one()
+
+	if not config:
+		db.telegram.config.insert_one({ 'group_id': 0, 'owner_id': os.getenv('OWNER_ID')  })
+
+	return db
 
 
 def setup_middlewares(dp: Dispatcher, db: MongoClient) -> None:
@@ -32,7 +38,11 @@ async def setup_routers(bot: Bot, dp: Dispatcher, db: MongoClient) -> None:
 async def setup_aiogram(bot: Bot, dispatcher: Dispatcher) -> None:
 	logging.debug("Configuring aiogram...")
 
-	database = setup_database()
+	DB_URL = os.getenv("DB_URL")
+	if not '--production' in sys.argv:
+		DB_URL = os.getenv("TEST_DB_URL")
+
+	database = setup_database(DB_URL)
 	setup_middlewares(dispatcher, database)
 	await setup_routers(bot, dispatcher, database)
 
@@ -46,6 +56,7 @@ async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
 
 def main() -> None:
 	BOT_TOKEN = os.getenv("BOT_TOKEN")
+
 	if not '--production' in sys.argv:
 		load_dotenv()
 		BOT_TOKEN = os.getenv("TEST_BOT_TOKEN")

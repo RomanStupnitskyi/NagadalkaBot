@@ -69,11 +69,12 @@ async def birthday_group_command(message: Message, db: MongoClient) -> None:
 			)
 		return None
 
+	bot = await message.bot.get_me()
 	user = message.from_user
 	user_data = collection.find_one({ "id": message.from_user.id })
 
 	if not user_data.get('birthday'):
-		button = InlineKeyboardButton(text="Додати свій День Народження", url="https://t.me/nagadalka_bot")
+		button = InlineKeyboardButton(text="Додати свій День Народження", url="https://t.me/{0}".format(bot.username))
 		markup = InlineKeyboardMarkup(inline_keyboard=[[button]])
 		await message.reply('❓ Я не знаю коли в тебе день народження', reply_markup=markup)
 		return None
