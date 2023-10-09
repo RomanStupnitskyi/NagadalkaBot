@@ -49,6 +49,56 @@ async def congratulate_async(bot: Bot, db: MongoClient, user: User, user_data):
 	asyncio.create_task(congratulate_async(bot, db, user, user_data))
 
 
+@birthday_router.message(Command("next_to_congratulate"))
+async def next_to_congratulate_command(message: Message, db: MongoClient) -> None:
+	next_to_congratulate = db.user.data.find_one()
+	now = datetime.now()
+
+	for user_data in db.user.data.find():
+		prev_users_birthday: datetime | None = next_to_congratulate.get('birthday')
+		if not prev_users_birthday:
+			next_to_congratulate = user_data
+			continue
+
+		prev_coming_birthday = datetime(now.year, prev_users_birthday.month, prev_users_birthday.day)
+		if now.timestamp() > prev_coming_birthday.timestamp():
+			prev_coming_birthday = datetime(now.year+1, prev_users_birthday.month, prev_users_birthday.day)
+
+		birthday: datetime | None = user_data.get('birthday')
+
+		if not birthday:
+			continue
+		
+		coming_birthday = datetime(now.year, birthday.month, birthday.day)
+		if now.timestamp() > coming_birthday.timestamp():
+			coming_birthday = datetime(now.year+1, birthday.month, birthday.day)
+		print(coming_birthday.strftime("%d.%m.%Y"))
+
+		if coming_birthday.timestamp() < prev_coming_birthday.timestamp():
+			next_to_congratulate = user_data
+			continue
+
+	coming_birthday: datetime | None = next_to_congratulate.get('birthday')
+	if coming_birthday:
+		coming_birthday_date = datetime(now.year, coming_birthday.month, coming_birthday.day)
+		if now.timestamp() > coming_birthday_date.timestamp():
+			coming_birthday_date = datetime(now.year+1, coming_birthday.month, coming_birthday.day)
+
+		age = coming_birthday_date.year - coming_birthday.year
+		member = await message.bot.get_chat_member(db.telegram.config.find_one().get("group_id"), int(next_to_congratulate.get('id')))
+		user = member.user
+
+		await message.reply(
+			'🎉 Найближчий День Народження у <a href="tg://user?id={0}">{1}</a>, <b>{2}</b> він(вона) святкуватиме своє {3}-річчя'
+				.format(
+					user.id,
+					user.full_name,
+					coming_birthday_date.strftime("%d.%m.%Y"),
+					age,
+				)
+			)
+
+
 @birthday_router.message(Command("birthday"), Group())
 async def birthday_group_command(message: Message, db: MongoClient) -> None:
 	collection: Collection = db.user.data
