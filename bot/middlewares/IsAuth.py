@@ -2,6 +2,8 @@ from typing import Any, Awaitable, Callable
 from pymongo import MongoClient
 import logging
 
+from aiogram.enums.chat_member_status import ChatMemberStatus
+from aiogram.types.message import Message
 from aiogram import BaseMiddleware, Bot
 from aiogram.types import TelegramObject
 from aiogram.types.user import User
@@ -19,6 +21,7 @@ class IsAuthMiddleware(BaseMiddleware):
     ) -> Any:
 		user: User = data['event_from_user']
 		event_chat: Chat = data['event_chat']
+		message: Message = data['event_update'].message
 		bot: Bot = data['bot']
 
 		if user.is_bot:
@@ -29,7 +32,12 @@ class IsAuthMiddleware(BaseMiddleware):
 		owner_id = config.get('owner_id')
 		
 		try:
-			if not await bot.get_chat_member(group_id, user.id):
+			member = await bot.get_chat_member(group_id, user.id)
+			if member.status == ChatMemberStatus.LEFT:
+				if self.db.user.data.find_one({ 'id': user.id }):
+					self.db.user.data.delete_one({ 'id': user.id })
+				
+				await message.reply('Permission denied')
 				return None
 
 			collection = self.db.user.data

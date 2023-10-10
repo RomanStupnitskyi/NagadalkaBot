@@ -39,7 +39,7 @@ async def setup_aiogram(bot: Bot, dispatcher: Dispatcher) -> None:
 	logging.debug("Configuring aiogram...")
 
 	DB_URL = os.getenv("DB_URL")
-	if not '--production' in sys.argv:
+	if not '--production' in sys.argv and not '--use-prod-db' in sys.argv:
 		DB_URL = os.getenv("TEST_DB_URL")
 
 	database = setup_database(DB_URL)
