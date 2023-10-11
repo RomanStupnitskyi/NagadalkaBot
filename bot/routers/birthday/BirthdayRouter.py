@@ -1,6 +1,7 @@
 from pymongo.collection import Collection
 from pymongo import MongoClient
 from datetime import datetime
+from math import ceil
 import asyncio
 import logging
 
@@ -19,38 +20,16 @@ from .filters.Group import Group
 
 birthday_router = Router(name="birthday")
 
-class UserData(StatesGroup):
-	birthday = State()
 
-
-async def congratulate(bot: Bot, db: MongoClient, user: User, birthday: datetime) -> None:
-	chat_id = db.telegram.config.find_one().get('group_id')
-	age = datetime.now().year - birthday.year
-	await bot.send_message(
-		chat_id,
-		'🎉 Вітаємо нашого співвітчизника(-цю) <a href="tg://user?id={0}">{1}</a> з Днем Народження, з його(її) {2}-річчям!!!'
-			.format(user.id, user.full_name, age)
-		)
-
-
-async def congratulate_async(bot: Bot, db: MongoClient, user: User, user_data):
-	now = datetime(*map(lambda x: int(x), datetime.now().strftime("%Y.%m.%d").split(".")))
-	birthday = user_data['birthday']
-	current_birthday = datetime(now.year, birthday.month, birthday.day)
-
-	if now.timestamp() >= (current_birthday.timestamp()):
-		current_birthday = datetime(now.year+1, birthday.month, birthday.day)
-
-	time_to_congratulate =  current_birthday.timestamp() - datetime.now().timestamp() + 37500
-	
-	await asyncio.sleep(time_to_congratulate)
-	await congratulate(bot, user, birthday)
-
-	asyncio.create_task(congratulate_async(bot, db, user, user_data))
-
+# =================================================================================
+# ============================= /NEXT_TO_CONGRATULATE =============================
+# =================================================================================
 
 @birthday_router.message(Command("next_to_congratulate"))
 async def next_to_congratulate_command(message: Message, db: MongoClient) -> None:
+	"""
+	The next person to congratulate on birthday
+	"""
 	next_to_congratulate = db.user.data.find_one()
 	now = datetime.now()
 
@@ -99,44 +78,92 @@ async def next_to_congratulate_command(message: Message, db: MongoClient) -> Non
 			)
 
 
-@birthday_router.message(Command("birthday"), Group())
-async def birthday_group_command(message: Message, db: MongoClient) -> None:
-	collection: Collection = db.user.data
-	if message.reply_to_message and not message.reply_to_message.from_user.is_bot:
-		user = message.reply_to_message.from_user
-		user_data = collection.find_one({ 'id': user.id })
+# ==================================================================================
+# ================================= /BIRTHDAY_LIST =================================
+# ==================================================================================
 
-		if not user_data or not user_data.get('birthday'):
-			await message.reply('<code>{0}</code> ще не народився(-лась)'.format(user.full_name))
-			return None
-		
-		await message.reply(
-			'🎁 День Народження <code>{0}</code> - {1}'
+
+@birthday_router.message(Command("birthday_list"))
+async def birthday_list_command(message: Message, db: MongoClient) -> None:
+	"""
+	List of birthdays of all users
+	"""
+	users_data = [*filter(lambda user: user.get('birthday'), db.user.data.find())]
+	users = []
+	group_id = db.telegram.config.find_one().get('group_id')
+	for user in users_data:
+		if len(users) == 10:
+			break
+
+		member = await message.bot.get_chat_member(group_id, int(user.get('id')))
+		users.append(
+			'<code>{0}.</code> {1}: {2}'
 				.format(
-					user.full_name,
-					user_data.get('birthday').strftime("%d.%m.%Y")
+					users_data.index(user)+1,
+					f'<b>{member.user.full_name}</b>' if message.chat.type != "private" else f'<a href="tg://user?id={user.get("id")}">{member.user.full_name}</a>',
+					user['birthday'].strftime('%d.%m.%Y')
 				)
 			)
-		return None
 
-	bot = await message.bot.get_me()
-	user = message.from_user
-	user_data = collection.find_one({ "id": message.from_user.id })
+	previous_button = InlineKeyboardButton(text="Попередня", callback_data="previous_button")
+	next_button = InlineKeyboardButton(text="Наступна", callback_data="next_button")
+	markup = InlineKeyboardMarkup(inline_keyboard=[[previous_button, next_button]])
 
-	if not user_data.get('birthday'):
-		button = InlineKeyboardButton(text="Додати свій День Народження", url="https://t.me/{0}".format(bot.username))
-		markup = InlineKeyboardMarkup(inline_keyboard=[[button]])
-		await message.reply('❓ Я не знаю коли в тебе день народження', reply_markup=markup)
-		return None
-	
-	await message.reply(
-		"🎁 Твій день народження - <b>{0}</b>"
-			.format(user_data['birthday'].strftime("%d.%m.%Y"))
+	await message.answer(
+		'{0}\n\nСторінка 1/{1}'
+			.format("\n".join(users), ceil(len(users_data)/10)),
+			reply_markup=markup
 		)
+
+
+# =================================================================================
+# =================================== /BIRTHDAY ===================================
+# =================================================================================
+
+
+class UserData(StatesGroup):
+	birthday = State()
+
+
+async def congratulate(bot: Bot, db: MongoClient, user: User, birthday: datetime) -> None:
+	chat_id = db.telegram.config.find_one().get('group_id')
+	age = datetime.now().year - birthday.year
+	await bot.send_message(
+		chat_id,
+		'🎉 Вітаємо нашого однокурсника(-цю) <a href="tg://user?id={0}">{1}</a> з Днем Народження, з його(її) {2}-річчям!!!'
+			.format(user.id, user.full_name, age)
+		)
+
+
+async def congratulate_async(bot: Bot, db: MongoClient, user: User, user_data):
+	now = datetime(*map(lambda x: int(x), datetime.now().strftime("%Y.%m.%d").split(".")))
+	birthday = user_data['birthday']
+	current_birthday = datetime(now.year, birthday.month, birthday.day)
+
+	if now.timestamp() >= (current_birthday.timestamp()):
+		current_birthday = datetime(now.year+1, birthday.month, birthday.day)
+
+	time_to_congratulate =  current_birthday.timestamp() - datetime.now().timestamp()
+	
+	await asyncio.sleep(time_to_congratulate)
+	await congratulate(bot, db, user, birthday)
+
+	asyncio.create_task(congratulate_async(bot, db, user, user_data))
+
+
+@birthday_router.message(Command("birthday"), Group())
+async def birthday_group_command(message: Message, db: MongoClient) -> None:
+	"""
+	Birthday command to use in group chat
+	"""
+	await message.reply("Will be soon")
 
 
 @birthday_router.message(Command("birthday"), StateFilter(None), DM())
 async def birthday_command(message: Message, db: MongoClient, state: FSMContext) -> None:
+	"""
+	Birthday command to use in direct messages
+	"""
 	collection: Collection = db.user.data
 	user_data = collection.find_one({ "id": message.from_user.id })
 
@@ -153,6 +180,9 @@ async def birthday_command(message: Message, db: MongoClient, state: FSMContext)
 
 @birthday_router.message(StateFilter(UserData.birthday), DM())
 async def birthday_handler(message: Message, db: MongoClient, state: FSMContext) -> None:
+	"""
+	Birthday handler to handle and save user's birthday
+	"""
 	try:
 		user = message.from_user
 		date_format = "%d.%m.%Y"
