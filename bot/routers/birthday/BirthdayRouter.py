@@ -88,32 +88,7 @@ async def birthday_list_command(message: Message, db: MongoClient) -> None:
 	"""
 	List of birthdays of all users
 	"""
-	users_data = [*filter(lambda user: user.get('birthday'), db.user.data.find())]
-	users = []
-	group_id = db.telegram.config.find_one().get('group_id')
-	for user in users_data:
-		if len(users) == 10:
-			break
-
-		member = await message.bot.get_chat_member(group_id, int(user.get('id')))
-		users.append(
-			'<code>{0}.</code> {1}: {2}'
-				.format(
-					users_data.index(user)+1,
-					f'<b>{member.user.full_name}</b>' if message.chat.type != "private" else f'<a href="tg://user?id={user.get("id")}">{member.user.full_name}</a>',
-					user['birthday'].strftime('%d.%m.%Y')
-				)
-			)
-
-	previous_button = InlineKeyboardButton(text="Попередня", callback_data="previous_button")
-	next_button = InlineKeyboardButton(text="Наступна", callback_data="next_button")
-	markup = InlineKeyboardMarkup(inline_keyboard=[[previous_button, next_button]])
-
-	await message.answer(
-		'{0}\n\nСторінка 1/{1}'
-			.format("\n".join(users), ceil(len(users_data)/10)),
-			reply_markup=markup
-		)
+	await message.reply("The command in development")
 
 
 # =================================================================================
@@ -156,7 +131,39 @@ async def birthday_group_command(message: Message, db: MongoClient) -> None:
 	"""
 	Birthday command to use in group chat
 	"""
-	await message.reply("Will be soon")
+
+	collection: Collection = db.user.data
+	if message.reply_to_message and not message.reply_to_message.from_user.is_bot:
+		user = message.reply_to_message.from_user
+		user_data = collection.find_one({ 'id': user.id })
+
+		if not user_data or not user_data.get('birthday'):
+			await message.reply('<code>{0}</code> ще не народився(-лась)'.format(user.full_name))
+			return None
+		
+		await message.reply(
+			'🎁 День Народження <code>{0}</code> - {1}'
+				.format(
+					user.full_name,
+					user_data.get('birthday').strftime("%d.%m.%Y")
+				)
+			)
+		return None
+
+	bot = await message.bot.get_me()
+	user = message.from_user
+	user_data = collection.find_one({ "id": message.from_user.id })
+
+	if not user_data.get('birthday'):
+		button = InlineKeyboardButton(text="Додати свій День Народження", url="https://t.me/{0}".format(bot.username))
+		markup = InlineKeyboardMarkup(inline_keyboard=[[button]])
+		await message.reply('❓ Я не знаю коли в тебе день народження', reply_markup=markup)
+		return None
+	
+	await message.reply(
+		"🎁 Твій день народження - <b>{0}</b>"
+			.format(user_data['birthday'].strftime("%d.%m.%Y"))
+		)
 
 
 @birthday_router.message(Command("birthday"), StateFilter(None), DM())
