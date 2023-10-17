@@ -417,7 +417,6 @@ async def startup_handler(bot: Bot, db: MongoClient = None) -> None:
 	Returns:
 		None
 	"""
-async def startup_handler(bot: Bot, db: MongoClient = None) -> None:
 	if not db:
 		return None
 	
