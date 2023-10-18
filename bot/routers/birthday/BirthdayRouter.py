@@ -25,7 +25,7 @@ birthday_router = Router(name="birthday")
 
 
 # =================================================================================
-# ============================= /NEXT_TO_CONGRATULATE =============================
+#  /NEXT_TO_CONGRATULATE - Sends a message to the group chat with information about
 # =================================================================================
 
 @birthday_router.message(Command("next_to_congratulate"))
@@ -35,11 +35,11 @@ async def next_to_congratulate_command(message: Message, db: MongoClient) -> Non
 	with information about their upcoming birthday.
 
 	Args:
-		message (telegram.Message): The message object that triggered the command.
-		db (pymongo.MongoClient): The database client object.
+	- message (telegram.Message): The message object that triggered the command.
+	- db (pymongo.MongoClient): The database client object.
 
 	Returns:
-		None
+	- None
 	"""
 	next_to_congratulate = db.user.data.find_one()
 	now = datetime.now()
@@ -89,9 +89,9 @@ async def next_to_congratulate_command(message: Message, db: MongoClient) -> Non
 			)
 
 
-# ==================================================================================
-# ================================= /BIRTHDAY_LIST =================================
-# ==================================================================================
+# ======================================================================================
+# /BIRTHDAY_LIST - Sends a list of users with their birthdays to the user who triggered
+# ======================================================================================
 
 
 @birthday_router.message(Command("birthday_list"))
@@ -101,11 +101,11 @@ async def birthday_list_command(message: Message, db: MongoClient) -> None:
 	The list is limited to 10 users per page, and pagination buttons are included to navigate between pages.
 
 	Args:
-		message (telegram.Message): The message object that triggered the command.
-		db (pymongo.MongoClient): The MongoDB client object used to interact with the database.
+	- message (telegram.Message): The message object that triggered the command.
+	- db (pymongo.MongoClient): The MongoDB client object used to interact with the database.
 
 	Returns:
-		None
+	- None
 	"""
 	users_data = [*filter(lambda user: user.get('birthday'), db.user.data.find())]
 	users = []
@@ -138,14 +138,14 @@ async def birthday_list_command(message: Message, db: MongoClient) -> None:
 @birthday_router.callback_query(IsButton('next_button'))
 async def next_button_handler(callback: CallbackQuery, db: MongoClient) -> None:
 	"""
-	Handles the callback query for the "next" button in the birthday list pagination.
+	Handles the callback query for the "next" button in the birthday router.
 	
 	Args:
-		callback (CallbackQuery): The callback query object.
-		db (MongoClient): The MongoDB client object.
+	- callback (CallbackQuery): The callback query object.
+	- db (MongoClient): The MongoDB client object.
 	
 	Returns:
-		None
+	- None
 	"""
 	button = json.loads(callback.data)
 	page = int(button["page"])
@@ -185,11 +185,11 @@ async def previous_button_handler(callback: CallbackQuery, db: MongoClient) -> N
 	Handles the callback query when the user clicks the "previous" button on the birthday list.
 
 	Parameters:
-		callback (CallbackQuery): The callback query object.
-		db (MongoClient): The MongoDB client object.
+	- callback (CallbackQuery): The callback query object.
+	- db (MongoClient): The MongoDB client object.
 
 	Returns:
-		None
+	- None
 	"""
 	button = json.loads(callback.data)
 	page = int(button["page"])
@@ -224,7 +224,7 @@ async def previous_button_handler(callback: CallbackQuery, db: MongoClient) -> N
 
 
 # =================================================================================
-# =================================== /BIRTHDAY ===================================
+# /BIRTHDAY - Handles the /birthday command in a group chat and in a private chat.
 # =================================================================================
 
 
@@ -237,13 +237,13 @@ async def congratulate(bot: Bot, db: MongoClient, user: User, birthday: datetime
 	Sends a birthday message to the group chat.
 
 	Args:
-		bot (Bot): The bot instance used to send the message.
-		db (MongoClient): The database client instance used to retrieve the group chat ID.
-		user (User): The user whose birthday is being celebrated.
-		birthday (datetime): The user's birthday.
+	- bot (Bot): The bot instance used to send the message.
+	- db (MongoClient): The database client instance used to retrieve the group chat ID.
+	- user (User): The user whose birthday is being celebrated.
+	- birthday (datetime): The user's birthday.
 
 	Returns:
-		None
+	- None
 	"""
 	chat_id = db.telegram.config.find_one().get('group_id')
 	age = datetime.now().year - birthday.year
@@ -259,13 +259,13 @@ async def congratulate_async(bot: Bot, db: MongoClient, user: User, user_data):
 	A coroutine function that calculates the time until the user's next birthday and sleeps until it's time to congratulate them.
 
 	Args:
-		bot (Bot): The bot instance.
-		db (MongoClient): The MongoDB client instance.
-		user (User): The user to congratulate.
-		user_data (dict): The user's data, including their birthday.
+	- bot (Bot): The bot instance.
+	- db (MongoClient): The MongoDB client instance.
+	- user (User): The user to congratulate.
+	- user_data (dict): The user's data, including their birthday.
 
 	Returns:
-		None
+	- None
 	"""
 	now = datetime(*map(lambda x: int(x), datetime.now().strftime("%Y.%m.%d").split(".")))
 	birthday = user_data['birthday']
@@ -292,11 +292,11 @@ async def birthday_group_command(message: Message, db: MongoClient) -> None:
 	If no birthday is found, the bot will prompt the user to add their birthday.
 	
 	Args:
-		message (telegram.Message): The message object that triggered the command.
-		db (pymongo.MongoClient): The MongoDB client object used to interact with the database.
+	- message (telegram.Message): The message object that triggered the command.
+	- db (pymongo.MongoClient): The MongoDB client object used to interact with the database.
 	
 	Returns:
-		None
+	- None
 	"""
 	collection: Collection = db.user.data
 	if message.reply_to_message and not message.reply_to_message.from_user.is_bot:
@@ -340,12 +340,12 @@ async def birthday_command(message: Message, db: MongoClient, state: FSMContext)
 	'UserData.birthday' and sending a message with instructions.
 	
 	Args:
-		message (telegram.Message): The message object representing the user's command.
-		db (pymongo.MongoClient): The MongoDB client object used to interact with the database.
-		state (aiogram.dispatcher.fsm.FSMContext): The FSM context object used to manage the conversation state.
+	- message (telegram.Message): The message object representing the user's command.
+	- db (pymongo.MongoClient): The MongoDB client object used to interact with the database.
+	- state (aiogram.dispatcher.fsm.FSMContext): The FSM context object used to manage the conversation state.
 
 	Returns:
-		None
+	- None
 	"""
 	collection: Collection = db.user.data
 	user_data = collection.find_one({ "id": message.from_user.id })
@@ -368,12 +368,12 @@ async def birthday_handler(message: Message, db: MongoClient, state: FSMContext)
 	if it's the user's birthday. If the user inputs an invalid date, an error message is sent.
 
 	Args:
-		message (telegram.Message): The message object representing the user's input.
-		db (pymongo.MongoClient): The MongoDB client object used to interact with the database.
-		state (aiogram.dispatcher.storage.FSMContext): The FSMContext object used to manage the conversation state.
+	- message (telegram.Message): The message object representing the user's input.
+	- db (pymongo.MongoClient): The MongoDB client object used to interact with the database.
+	- state (aiogram.dispatcher.storage.FSMContext): The FSMContext object used to manage the conversation state.
 
 	Returns:
-		None
+	- None
 	"""
 	try:
 		user = message.from_user
@@ -411,11 +411,11 @@ async def startup_handler(bot: Bot, db: MongoClient = None) -> None:
 	Handles the startup of the BirthdayRouter by congratulating users with a birthday.
 
 	Args:
-		bot (Bot): The bot instance.
-		db (MongoClient, optional): The MongoDB client instance. Defaults to None.
+	- bot (Bot): The bot instance.
+	- db (MongoClient, optional): The MongoDB client instance. Defaults to None.
 
 	Returns:
-		None
+	- None
 	"""
 	if not db:
 		return None
