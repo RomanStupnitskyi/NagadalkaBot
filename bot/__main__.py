@@ -8,7 +8,7 @@ import os
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from middlewares import DatabaseMiddleware, IsAuthMiddleware
-from routers import general_router, development_router, birthday_router
+from routers import general_router, development_router, birthday_router, crocodile_router
 
 
 def setup_logging() -> None:
@@ -56,7 +56,7 @@ def setup_middlewares(dp: Dispatcher, db: MongoClient) -> None:
 	"""
 	dp.message.middleware(DatabaseMiddleware(db))
 	dp.message.outer_middleware(IsAuthMiddleware(db))
-	birthday_router.callback_query.middleware(DatabaseMiddleware(db))
+	dp.callback_query.middleware(DatabaseMiddleware(db))
 
 
 async def setup_routers(bot: Bot, dp: Dispatcher, db: MongoClient) -> None:
@@ -71,7 +71,7 @@ async def setup_routers(bot: Bot, dp: Dispatcher, db: MongoClient) -> None:
 	Returns:
 		None
 	"""
-	dp.include_routers(general_router, development_router, birthday_router)
+	dp.include_routers(general_router, development_router, birthday_router, crocodile_router)
 	await birthday_router.emit_startup(bot, db)
 
 
