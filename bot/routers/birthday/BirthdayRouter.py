@@ -128,7 +128,7 @@ async def birthday_list_command(message: Message, db: MongoClient) -> None:
 	next_button = InlineKeyboardButton(text="Наступна", callback_data=json.dumps({'name': 'next_button', 'page': 1}))
 	markup = InlineKeyboardMarkup(inline_keyboard=[[previous_button, next_button]])
 
-	await message.answer(
+	await message.reply(
 		'{0}\n\nСторінка 1/{1}'
 			.format("\n".join(users), ceil(len(users_data)/10)),
 			reply_markup=markup
@@ -147,8 +147,7 @@ async def next_button_handler(callback: CallbackQuery, db: MongoClient) -> None:
 	Returns:
 	- None
 	"""
-	print(callback.from_user, callback.message);
-	if callback.from_user.id != callback.message.from_user.id:
+	if callback.from_user.id != callback.message.reply_to_message.from_user.id:
 		await callback.answer('Це не ваше повідомлення', show_alert=True)
 		return None
 
@@ -196,7 +195,7 @@ async def previous_button_handler(callback: CallbackQuery, db: MongoClient) -> N
 	Returns:
 	- None
 	"""
-	if callback.from_user.id != callback.message.from_user.id:
+	if callback.from_user.id != callback.message.reply_to_message.from_user.id:
 		await callback.answer('Це не ваше повідомлення', show_alert=True)
 		return None
 	
