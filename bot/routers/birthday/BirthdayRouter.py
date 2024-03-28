@@ -147,6 +147,10 @@ async def next_button_handler(callback: CallbackQuery, db: MongoClient) -> None:
 	Returns:
 	- None
 	"""
+	if callback.from_user.id != callback.message.from_user.id:
+		await callback.answer('Це не ваше повідомлення', show_alert=True)
+		return None
+
 	button = json.loads(callback.data)
 	page = int(button["page"])
 	users_data = [*filter(lambda user: user.get('birthday'), db.user.data.find())]
@@ -191,6 +195,10 @@ async def previous_button_handler(callback: CallbackQuery, db: MongoClient) -> N
 	Returns:
 	- None
 	"""
+	if callback.from_user.id != callback.message.from_user.id:
+		await callback.answer('Це не ваше повідомлення', show_alert=True)
+		return None
+	
 	button = json.loads(callback.data)
 	page = int(button["page"])
 	users_data = [*filter(lambda user: user.get('birthday'), db.user.data.find())]
