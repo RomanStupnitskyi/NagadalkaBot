@@ -147,6 +147,7 @@ async def next_button_handler(callback: CallbackQuery, db: MongoClient) -> None:
 	Returns:
 	- None
 	"""
+	print(callback.from_user, callback.message);
 	if callback.from_user.id != callback.message.from_user.id:
 		await callback.answer('Це не ваше повідомлення', show_alert=True)
 		return None
