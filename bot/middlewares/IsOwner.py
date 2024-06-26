@@ -1,5 +1,4 @@
 from typing import Any, Awaitable, Callable
-import os
 
 from aiogram import BaseMiddleware, Bot
 from aiogram.types import TelegramObject
@@ -17,8 +16,9 @@ class IsOwnerMiddleware(BaseMiddleware):
 		user: User = data["event_from_user"]
 		chat: Chat = data["event_chat"]
 		bot: Bot = data["bot"]
+		telegram_config: dict[str, Any] = data["telegram_config"]
 
-		if str(user.id) != os.getenv("OWNER_ID"):
+		if user.id != telegram_config.OWNER_ID:
 			await bot.send_message(chat.id, "Permission denied")
 			return None
 

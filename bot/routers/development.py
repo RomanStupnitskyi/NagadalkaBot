@@ -1,11 +1,13 @@
 import ast
 from datetime import datetime
 from pymongo import MongoClient
-from .middlewares.IsOwner import IsOwnerMiddleware
+from pymongo.collection import Collection
 
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters.command import Command
+
+from bot.middlewares.IsOwner import IsOwnerMiddleware
 
 
 development_router = Router(name="development")
@@ -26,7 +28,7 @@ def insert_returns(body):
 
 
 @development_router.message(Command("eval"))
-async def evaluate(message: Message, db: MongoClient) -> None:
+async def evaluate(message: Message, database_client: MongoClient) -> None:
 	try:
 		fn_name = "_eval_expr"
 		cmd = message.text.split(" ")
@@ -44,7 +46,7 @@ async def evaluate(message: Message, db: MongoClient) -> None:
 		env = {
 			'message': message,
 			'bot': message.bot,
-			'db': db,
+			'database_client': database_client,
 			'__import__': __import__
 		}
 		exec(compile(parsed, filename="<ast>", mode="exec"), env)
@@ -59,42 +61,17 @@ async def evaluate(message: Message, db: MongoClient) -> None:
 
 
 @development_router.message(Command("reset"))
-async def reset_command(message: Message, db: MongoClient) -> None:
+async def reset_command(message: Message, database_client: MongoClient) -> None:
 	user_data = { 'id': message.from_user.id }
+	collection: Collection = database_client.user.data
 
-	if message.reply_to_message and not message.reply_to_message.from_user.is_bot:
-		user_data = { 'id': message.reply_to_message.from_user.id }
-		db.user.data.delete_one(user_data)
-		db.user.data.insert_one(user_data)
+	reply_to_message = message.reply_to_message
+	if reply_to_message and not reply_to_message.from_user.is_bot:
+		user_data = { 'id': reply_to_message.from_user.id }
+		collection.delete_one(user_data)
 
-		await message.reply("✅ User's data has been reset")
-		return None
+		return await message.reply("✅ User's data has been reset")
 	
-	db.user.data.delete_one(user_data)
-	db.user.data.insert_one(user_data)
+	collection.delete_one(user_data)
 
-	await message.reply("✅ Data has been reset")
-
-
-@development_router.message(Command("user_id"))
-async def user_id_command(message: Message) -> None:
-	await message.reply(
-		"User id: <code>{0}</code>"
-			.format(
-				message.reply_to_message.from_user.id
-					if message.reply_to_message and not message.reply_to_message.from_user.is_bot
-					else message.from_user.id
-				)
-		)
-
-
-@development_router.message(Command("set_group"))
-async def set_group(message: Message, db: MongoClient) -> None:
-	if message.chat.type == 'group' or message.chat.type == 'supergroup':
-		db.telegram.config.update_one(
-			{ 'owner_id': str(message.from_user.id) },
-			{ '$set': { 'group_id': message.chat.id } }
-		)
-		await message.reply('✅ Group updated')
-	else:
-		await message.reply('❌ Current chat is not a group')
+	return await message.reply("✅ Data has been reset")

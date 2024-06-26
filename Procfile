@@ -1,1 +1,1 @@
-worker: python3 bot --production --hosting
+worker: python3 main.py --hosting
